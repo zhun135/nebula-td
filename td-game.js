@@ -192,7 +192,10 @@ function bindEvents() {
       if(mx>=bx&&mx<=bx+bw&&my>=by&&my<=by+bh) {
         // toggle map
         const maps=Object.keys(MAPS); const idx=maps.indexOf(curMap);
-        curMap=maps[(idx+1)%maps.length]; buildMap(); return;
+        curMap=maps[(idx+1)%maps.length]; buildMap();
+        // Flash feedback
+        S.animText=`🗺️ ${MAPS[curMap].name}`; S.animAlpha=1.5;
+        return;
       }
     }
 
