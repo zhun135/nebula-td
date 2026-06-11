@@ -187,8 +187,8 @@ function bindEvents() {
     const mx=S.mouse.x,my=S.mouse.y;
 
     // 地图选择
-    if(S.phase==='idle'&&S.mapSelect) {
-      const bw=100,bh=50,bx=W/2-bw/2,by=H/2+bh+10;
+    if(S.phase==='idle') {
+      const bw=100,bh=40,bx=W/2-bw/2,by=H/2+50;
       if(mx>=bx&&mx<=bx+bw&&my>=by&&my<=by+bh) {
         // toggle map
         const maps=Object.keys(MAPS); const idx=maps.indexOf(curMap);
