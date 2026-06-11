@@ -1,6 +1,6 @@
 /* ===================================
-   星云塔防 v1.1 · 游戏核心
-   5塔 · 6敌 · 2图 · 3难度 · 15波
+   星云塔防 v1.2 · 游戏核心
+   5塔 · 6敌 · 2图 · 3难度 · 15波 · 音效
    连击·飘字·分裂·链电·计分
    =================================== */
 
@@ -114,6 +114,7 @@ function init() {
   resize(); window.addEventListener('resize',resize);
   ctx=canvas.getContext('2d');
   initStars(); buildPanel(); bindEvents();
+  SOUND.ambientStart();
   requestAnimationFrame(loop);
   } catch(e) { console.error('TD INIT ERROR',e); document.getElementById('td-tip').textContent='加载失败: '+e.message; }
 }
@@ -240,9 +241,13 @@ function bindEvents() {
       }
     }
   });
-  document.getElementById('btn-start').addEventListener('click',()=>{ if(S.phase==='idle') startWave(); });
+  document.getElementById('btn-start').addEventListener('click',()=>{ if(S.phase==='idle'){SOUND.ensureCtx();SOUND.ambientSetLevel(0.1);startWave();} });
   document.getElementById('btn-speed').addEventListener('click',()=>{ S.speed=S.speed===1?2:S.speed===2?1:1;refreshBtns(); });
   document.getElementById('btn-wave').addEventListener('click',()=>{ if(S.phase==='between') S.betweenTimer=0; });
+  document.getElementById('btn-mute').addEventListener('click',()=>{
+    const m=SOUND.toggleMute();
+    document.getElementById('btn-mute').textContent=m?'🔇':'🔊';
+  });
 }
 function towerAt(c,r){return S.towers.some(t=>t.col===c&&t.row===r);}
 function towerAtPixel(mx,my){const c=Math.floor(mx/CELL),r=Math.floor(my/CELL);return S.towers.find(t=>t.col===c&&t.row===r)||null;}
@@ -252,6 +257,7 @@ function startWave() {
   if(S.wave>=S.maxWave) return;
   S.wave++; S.phase='prep';
   S.animText=`第 ${S.wave} 波`; S.animAlpha=1;
+  SOUND.play('wave');
   if(S.wave>1) {
     const bonus=S.wave*10;
     S.credits+=bonus; S.score+=bonus;
@@ -274,6 +280,7 @@ function updateSpawn(dt) {
     const q=S.spawnQ.shift(),e=E[q.e],hp=Math.floor(e.hp*DIFF[diff].hpMul);
     const start=pixelWP()[0];
     S.enemies.push({type:q.e,x:start.x,y:start.y,hp,maxHp:hp,speed:e.speed*DIFF[diff].spdMul,reward:e.reward,color:e.color,r:e.r,wpIdx:1,dead:false,slow:0,slowDur:0,shieldTimer:0,shieldActive:false,shieldCD:e.shieldCD||0,shieldDur:e.shieldDur||0,splits:e.splits||0});
+    if(q.e==='boss') SOUND.play('boss');
     if(S.spawnQ.length>0) S.spawnTimer+=q.gap;
   }
 }
@@ -318,10 +325,10 @@ function updateTowers(dt) {
 }
 function fire(tower,cx,cy,target) {
   const type=T[tower.type];
-  if(type.bullet==='beam'){S.bullets.push({kind:'beam',x1:cx,y1:cy,x2:target.x,y2:target.y,color:type.color,life:0.08});dealDmg(target,tower.dmg,type.color);}
+  if(type.bullet==='beam'){S.bullets.push({kind:'beam',x1:cx,y1:cy,x2:target.x,y2:target.y,color:type.color,life:0.08});dealDmg(target,tower.dmg,type.color);SOUND.play(tower.type==='dark'?'dark':'laser');}
   else if(type.bullet==='blast'){const dx=target.x-cx,dy=target.y-cy,dd=Math.hypot(dx,dy);S.bullets.push({kind:'ball',x:cx+dx/dd*10,y:cy+dy/dd*10,tx:target.x,ty:target.y,color:type.color,life:dd/400,spd:400,r:4,payload:'ion'});}
   else if(type.bullet==='slow'){const dx=target.x-cx,dy=target.y-cy,dd=Math.hypot(dx,dy);S.bullets.push({kind:'ball',x:cx+dx/dd*10,y:cy+dy/dd*10,tx:target.x,ty:target.y,color:type.color,life:dd/300,spd:300,r:3,payload:'grav'});}
-  else if(type.bullet==='arc'){S.bullets.push({kind:'beam',x1:cx,y1:cy,x2:target.x,y2:target.y,color:type.color,life:0.08});arcChain(target,tower.dmg,type,0,[target]);}
+  else if(type.bullet==='arc'){S.bullets.push({kind:'beam',x1:cx,y1:cy,x2:target.x,y2:target.y,color:type.color,life:0.08});arcChain(target,tower.dmg,type,0,[target]);SOUND.play('arc');}
 }
 function arcChain(target,dmg,type,depth,hitSet){
   if(depth>=type.chain) return;
@@ -344,9 +351,10 @@ function dealDmg(e,dmg,color) {
   if(e.hp<=0) {
     e.dead=true;
     S.credits+=e.reward; S.kills++; S.score+=10;
+    SOUND.play('kill');
     // combo
     S.comboTimer=1.5; S.combo++;
-    if(S.combo>1){const bonus=Math.min(S.combo,5);S.credits+=bonus;S.score+=bonus*5;S.texts.push({x:e.x+10,y:e.y-16,txt:`COMBO x${S.combo}`,color:'#ffc107',life:1,vy:-70});}
+    if(S.combo>1){const bonus=Math.min(S.combo,5);S.credits+=bonus;S.score+=bonus*5;S.texts.push({x:e.x+10,y:e.y-16,txt:`COMBO x${S.combo}`,color:'#ffc107',life:1,vy:-70});SOUND.play('combo');}
     if(S.combo>S.comboMax) S.comboMax=S.combo;
     boom(e.x,e.y,e.color);
     // splitter
@@ -405,6 +413,8 @@ function updateBetween(dt){
 // ─── 结束 ────────────────────────────────
 function endGame(win) {
   S.phase='over'; S.selType=null;S.selTower=null;S.popup=null;
+  SOUND.play(win?'victory':'defeat');
+  SOUND.ambientSetLevel(0.02);
   const bonus=S.lives*20+S.wave*50;
   S.score+=bonus;
   let rating='D',rcolor='#888';
@@ -427,6 +437,7 @@ function restartGame() {
   document.getElementById('td-overlay').style.display='none';
   document.getElementById('td-tip').textContent='选择难度和地图，点击 🚀 开始游戏';
   document.getElementById('td-tip').style.color=''; refreshBtns();refresh();
+  SOUND.ambientSetLevel(0.06);
 }
 
 // ─── LOOP ────────────────────────────────
