@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="星云塔防 · 策略布阵，抵御星际敌舰">
+  <meta name="theme-color" content="#0a0a0f">
+  <title>星云塔防 v1.0</title>
+  <style>
+    :root {
+      --bg-deep: #0a0a0f;
+      --bg-primary: #0d0d1a;
+      --bg-card: #111122;
+      --bg-card-hover: #151530;
+      --border-subtle: rgba(255,255,255,0.06);
+      --text-primary: #e8e8f0;
+      --text-secondary: #8888a0;
+      --text-muted: #555570;
+      --accent: #00e5ff;
+      --accent2: #b44dff;
+      --accent3: #ff3cac;
+      --font-mono: 'Cascadia Code','Fira Code','Consolas',monospace;
+      --font-sans: 'PingFang SC','Microsoft YaHei',-apple-system,sans-serif;
+      --radius: 12px;
+      --transition: 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:var(--font-sans);background:var(--bg-deep);color:var(--text-primary);min-height:100vh;overflow-x:hidden;}
+  </style>
+  <link rel="stylesheet" href="td-game.css">
+</head>
+<body>
+  <main>
+    <section class="td-wrapper">
+      <div class="td-hud" id="td-hud">
+        <div class="td-hud-group">
+          <div class="td-hud-item">
+            <span class="td-hud-label">🌌 波次</span>
+            <span class="td-hud-value" id="hud-wave">0 / 15</span>
+          </div>
+          <div class="td-hud-item">
+            <span class="td-hud-label">💰 信用点</span>
+            <span class="td-hud-value" id="hud-credits">300</span>
+          </div>
+        </div>
+        <div class="td-hud-group">
+          <div class="td-hud-item">
+            <span class="td-hud-label">❤️ 生命</span>
+            <span class="td-hud-value" id="hud-lives">20</span>
+          </div>
+          <div class="td-hud-item">
+            <span class="td-hud-label">💀 击杀</span>
+            <span class="td-hud-value" id="hud-kills">0</span>
+          </div>
+        </div>
+        <div class="td-hud-actions">
+          <button class="td-btn td-btn-start" id="btn-start">🚀 开始游戏</button>
+          <button class="td-btn td-btn-sm" id="btn-speed">▶ 1×</button>
+          <button class="td-btn td-btn-skip" id="btn-wave" style="display:none;">⚡ 跳过等待</button>
+        </div>
+      </div>
+      <div class="td-canvas-container">
+        <canvas id="game-canvas"></canvas>
+        <div class="td-overlay" id="td-overlay" style="display:none;">
+          <div class="td-overlay-content" id="td-overlay-content"></div>
+        </div>
+      </div>
+      <div class="td-bottom-panel">
+        <div class="td-tower-panel" id="tower-panel"></div>
+        <div class="td-info-bar">
+          <span id="td-tip">点击 🚀 开始游戏，然后布置防御塔</span>
+          <span class="td-version">v1.0</span>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script src="td-game.js"></script>
+</body>
+</html>
