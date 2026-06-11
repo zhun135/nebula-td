@@ -109,11 +109,13 @@ const S = {
 
 // ─── 初始化 ──────────────────────────────
 function init() {
+  try {
   canvas=document.getElementById('game-canvas');
   resize(); window.addEventListener('resize',resize);
   ctx=canvas.getContext('2d');
   initStars(); buildPanel(); bindEvents();
   requestAnimationFrame(loop);
+  } catch(e) { console.error('TD INIT ERROR',e); document.getElementById('td-tip').textContent='加载失败: '+e.message; }
 }
 function resize() {
   const wrap=canvas.parentElement;
@@ -455,6 +457,10 @@ function loop(ts){
   if(S.phase==='between'){ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(W/2-140,8,280,32);ctx.fillStyle='#00e5ff';ctx.font='bold 14px sans-serif';ctx.textAlign='center';ctx.fillText(`⏳ 准备 — 下一波 ${S.wave+1}/${S.maxWave} — ${Math.ceil(Math.max(0,S.betweenTimer))}s`,W/2,30);ctx.textAlign='start';}
   // idle menu
   if(S.phase==='idle'){drawIdleMenu();}
+  // v1.1 watermark
+  ctx.fillStyle='rgba(255,255,255,0.08)';ctx.font='9px sans-serif';ctx.textAlign='right';
+  ctx.fillText('Nebula TD v1.1',W-8,H-6);
+  ctx.textAlign='start';
   requestAnimationFrame(loop);
 }
 
