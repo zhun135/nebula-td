@@ -1,6 +1,6 @@
 /* ===================================
-   星云塔防 v1.2 · 游戏核心
-   5塔 · 6敌 · 2图 · 3难度 · 15波 · 音效
+   星云塔防 v1.3 · 游戏核心
+   5塔 · 6敌 · 2图 · 3难度 · 15波 · 音效 · 排行榜
    连击·飘字·分裂·链电·计分
    =================================== */
 
@@ -105,6 +105,7 @@ const S = {
   animText:'', animAlpha:0, animSub:'', animSubAlpha:0,
   combo:0, comboTimer:0, comboMax:0,
   mapSelect:false, lastMapX:0,
+  leaderboard:[], // Top 10 高分
 };
 
 // ─── 初始化 ──────────────────────────────
@@ -113,7 +114,8 @@ function init() {
   canvas=document.getElementById('game-canvas');
   resize(); window.addEventListener('resize',resize);
   ctx=canvas.getContext('2d');
-  initStars(); buildPanel(); bindEvents();
+  loadLB(); initStars(); buildPanel(); bindEvents();
+  window.addEventListener('keydown',keyHandler);
   SOUND.ambientStart();
   requestAnimationFrame(loop);
   } catch(e) { console.error('TD INIT ERROR',e); document.getElementById('td-tip').textContent='加载失败: '+e.message; }
@@ -122,6 +124,24 @@ function resize() {
   const wrap=canvas.parentElement;
   W=Math.min(wrap.clientWidth-8,960); H=Math.round(W*2/3);
   CELL=W/COLS; canvas.width=W; canvas.height=H;
+}
+
+// ─── 排行榜 ──────────────────────────────
+function loadLB() { try { S.leaderboard=JSON.parse(localStorage.getItem('nebula-td-scores')||'[]'); } catch(e) { S.leaderboard=[]; } }
+function saveScore(entry) {
+  S.leaderboard.push(entry);
+  S.leaderboard.sort((a,b)=>b.score-a.score);
+  S.leaderboard=S.leaderboard.slice(0,10);
+  localStorage.setItem('nebula-td-scores',JSON.stringify(S.leaderboard));
+}
+function keyHandler(e) {
+  if(e.code==='Space') { e.preventDefault();
+    if(S.phase==='active'||S.phase==='between'||S.phase==='prep') { S._prePause=S.phase; S.phase='paused'; return; }
+    if(S.phase==='paused') { S.phase=S._prePause||'active'; return; }
+  }
+  if(e.code==='KeyR') {
+    if(S.phase==='active'||S.phase==='between'||S.phase==='prep'||S.phase==='paused') { restartGame(); }
+  }
 }
 function initStars() {
   for(let i=0;i<120;i++) S.stars.push({
@@ -244,6 +264,10 @@ function bindEvents() {
   document.getElementById('btn-start').addEventListener('click',()=>{ if(S.phase==='idle'){SOUND.ensureCtx();SOUND.ambientSetLevel(0.1);startWave();} });
   document.getElementById('btn-speed').addEventListener('click',()=>{ S.speed=S.speed===1?2:S.speed===2?1:1;refreshBtns(); });
   document.getElementById('btn-wave').addEventListener('click',()=>{ if(S.phase==='between') S.betweenTimer=0; });
+  document.getElementById('btn-pause').addEventListener('click',()=>{
+    if(S.phase==='active'||S.phase==='between'||S.phase==='prep') { S._prePause=S.phase; S.phase='paused'; }
+    else if(S.phase==='paused') { S.phase=S._prePause||'active'; }
+  });
   document.getElementById('btn-mute').addEventListener('click',()=>{
     const m=SOUND.toggleMute();
     document.getElementById('btn-mute').textContent=m?'🔇':'🔊';
@@ -422,6 +446,8 @@ function endGame(win) {
   if(S.score>10000){rating='B';rcolor='#ffc107';}
   if(S.score>20000){rating='A';rcolor='#00e5ff';}
   if(S.score>35000){rating='S';rcolor='#ffe082';}
+  // 保存排行榜
+  saveScore({score:S.score, wave:S.wave, kills:S.kills, comboMax:S.comboMax, diff:diff, map:curMap, date:new Date().toLocaleDateString('zh-CN')});
   const o=document.getElementById('td-overlay'),c=document.getElementById('td-overlay-content');
   o.style.display='flex';
   c.innerHTML=win?
@@ -444,7 +470,7 @@ function restartGame() {
 function loop(ts){
   if(!S._lt) S._lt=ts;
   let dt=(ts-S._lt)/1000; if(dt>0.1)dt=0.1; S._lt=ts; dt*=S.speed;
-  if(S.phase!=='over'&&S.phase!=='idle'){
+  if(S.phase!=='over'&&S.phase!=='idle'&&S.phase!=='paused'){
     updateSpawn(dt);updateBetween(dt);updateEnemies(dt);
     updateTowers(dt);updateBullets(dt);updateParticles(dt);updateTexts(dt);
     for(const s of S.stars){s.y+=s.s*dt;if(s.y>H){s.y=-3;s.x=Math.random()*W;}s.p+=dt*4;}
@@ -471,9 +497,18 @@ function loop(ts){
   if(S.phase==='between'){ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(W/2-140,8,280,32);ctx.fillStyle='#00e5ff';ctx.font='bold 14px sans-serif';ctx.textAlign='center';ctx.fillText(`⏳ 准备 — 下一波 ${S.wave+1}/${S.maxWave} — ${Math.ceil(Math.max(0,S.betweenTimer))}s`,W/2,30);ctx.textAlign='start';}
   // idle menu
   if(S.phase==='idle'){drawIdleMenu();}
-  // v1.1 watermark
+  // pause overlay
+  if(S.phase==='paused'){
+    ctx.fillStyle='rgba(0,0,0,0.55)';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#fff';ctx.font='bold 28px sans-serif';ctx.textAlign='center';
+    ctx.fillText('⏸ 已暂停',W/2,H/2-20);
+    ctx.font='15px sans-serif';ctx.fillStyle='var(--text-secondary)';
+    ctx.fillText('空格键继续 · R 键重新开始',W/2,H/2+20);
+    ctx.textAlign='start';
+  }
+  // v1.3 watermark
   ctx.fillStyle='rgba(255,255,255,0.08)';ctx.font='9px sans-serif';ctx.textAlign='right';
-  ctx.fillText('Nebula TD v1.1',W-8,H-6);
+  ctx.fillText('Nebula TD v1.3',W-8,H-6);
   ctx.textAlign='start';
   requestAnimationFrame(loop);
 }
@@ -501,6 +536,25 @@ function drawIdleMenu() {
   // start hint
   ctx.fillStyle='rgba(0,0,0,0.4)';ctx.fillRect(W/2-110,H/2-42,220,28);
   ctx.fillStyle='#00e5ff';ctx.font='bold 14px sans-serif';ctx.textAlign='center';ctx.fillText('点击 🚀 开始游戏',W/2,H/2-24);
+  ctx.textAlign='start';
+  // leaderboard
+  drawLeaderboard();
+}
+
+// ─── 排行榜绘制 ──────────────────────────
+function drawLeaderboard() {
+  if(S.leaderboard.length===0) return;
+  const lbX=8, lbY=H-8, lh=16, maxShow=Math.min(S.leaderboard.length,8);
+  ctx.fillStyle='rgba(0,0,0,0.45)';round(lbX-4,lbY-maxShow*lh-10,140,maxShow*lh+14,6);ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.15)';ctx.font='bold 9px sans-serif';ctx.textAlign='left';
+  ctx.fillText('🏆 排行榜',lbX,lbY-maxShow*lh+2);
+  for(let i=0;i<maxShow;i++) {
+    const e=S.leaderboard[i];
+    const y=lbY-(maxShow-1-i)*lh;
+    const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}.`;
+    ctx.fillStyle=i<3?'#fff':'rgba(255,255,255,0.5)';ctx.font='8px sans-serif';
+    ctx.fillText(`${medal} ${e.score}分 ${DIFF[e.diff]?.name?.slice(0,2)||''} W${e.wave}`,lbX+2,y);
+  }
   ctx.textAlign='start';
 }
 
