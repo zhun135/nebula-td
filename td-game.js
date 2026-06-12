@@ -279,7 +279,7 @@ function towerAtPixel(mx,my){const c=Math.floor(mx/CELL),r=Math.floor(my/CELL);r
 // ─── 波次 ────────────────────────────────
 function startWave() {
   if(S.wave>=S.maxWave) return;
-  S.wave++; S.phase='prep';
+  S.wave++; S.phase='prep'; S.prepTimer=1.8;
   S.animText=`第 ${S.wave} 波`; S.animAlpha=1;
   SOUND.play('wave');
   if(S.wave>1) {
@@ -287,15 +287,18 @@ function startWave() {
     S.credits+=bonus; S.score+=bonus;
     S.animSub=`+${bonus} 信用点`; S.animSubAlpha=1;
   }
-  setTimeout(()=>{
-    if(S.phase!=='prep') return;
+  refreshBtns();
+}
+function updatePrep(dt) {
+  if(S.phase!=='prep') return;
+  S.prepTimer-=dt;
+  if(S.prepTimer<=0) {
     S.phase='active';
     const cfg=WAVES[S.wave-1];
     S.spawnQ=[];
     for(const g of cfg) for(let i=0;i<g.n;i++) S.spawnQ.push({e:g.e,gap:g.gap});
     S.spawnTimer=400; S.animText='';S.animAlpha=0;
-  },1800);
-  refreshBtns();
+  }
 }
 function updateSpawn(dt) {
   if(S.phase!=='active'||S.spawnQ.length===0) return;
@@ -471,7 +474,7 @@ function loop(ts){
   if(!S._lt) S._lt=ts;
   let dt=(ts-S._lt)/1000; if(dt>0.1)dt=0.1; S._lt=ts; dt*=S.speed;
   if(S.phase!=='over'&&S.phase!=='idle'&&S.phase!=='paused'){
-    updateSpawn(dt);updateBetween(dt);updateEnemies(dt);
+    updateSpawn(dt);updatePrep(dt);updateBetween(dt);updateEnemies(dt);
     updateTowers(dt);updateBullets(dt);updateParticles(dt);updateTexts(dt);
     for(const s of S.stars){s.y+=s.s*dt;if(s.y>H){s.y=-3;s.x=Math.random()*W;}s.p+=dt*4;}
     if(S.shakeTimer>0) S.shakeTimer-=dt;
